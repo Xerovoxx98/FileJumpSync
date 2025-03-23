@@ -29,18 +29,34 @@ class EventHandler(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory:
             log.info('Event Triggered by File Creation: ' + str(event.src_path).replace('\\', '/'))
-            sleep(15) # Wait 15 seconds, then verify the file still exists. (This stops Temp files from being uploaded)
-            if exists(str(event.src_path).replace('\\', '/')):
-                content = self.wait_for_file(event.src_path)
-                path = str(event.src_path).removeprefix(LOCAL_PATH)
-                path = path.replace('\\', '/')
-                files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
-                headers = {'Authorization': f'Bearer {API_KEY}'}
-                response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
-                if response.status_code == 201:
-                    log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
-                else:
-                    log.error('Upload Failed! Error code: ' + str(response.status_code))
+            content = self.wait_for_file(event.src_path)
+            path = str(event.src_path).removeprefix(LOCAL_PATH)
+            path = path.replace('\\', '/')
+            files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
+            headers = {'Authorization': f'Bearer {API_KEY}'}
+            response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
+            if response.status_code == 201:
+                log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
+            else:
+                log.error('Upload Failed! Error code: ' + str(response.status_code))
+        else:
+            log.warning('Temporary file ignored: ' + str(event.src_path).replace('\\', '/'))
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            log.info('Event Triggered by File Creation: ' + str(event.src_path).replace('\\', '/'))
+            content = self.wait_for_file(event.src_path)
+            path = str(event.src_path).removeprefix(LOCAL_PATH)
+            path = path.replace('\\', '/')
+            files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
+            headers = {'Authorization': f'Bearer {API_KEY}'}
+            response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
+            if response.status_code == 201:
+                log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
+            else:
+                log.error('Upload Failed! Error code: ' + str(response.status_code))
+        else:
+            log.warning('Temporary file ignored: ' + str(event.src_path).replace('\\', '/'))
 
 def main():
     makedirs(LOCAL_PATH, exist_ok=True)
