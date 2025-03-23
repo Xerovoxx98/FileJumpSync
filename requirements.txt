@@ -1,0 +1,4 @@
+watchdog
+python-dotenv
+rich
+niquests
