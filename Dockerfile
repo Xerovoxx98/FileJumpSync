@@ -1,4 +1,4 @@
-FROM python3.13
+FROM python:3
 RUN mkdir /app
 WORKDIR /app
 COPY main.py ./
