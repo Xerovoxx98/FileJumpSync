@@ -43,10 +43,8 @@ jobs:
         patch += 1
         new_version = f"v{major}.{minor}.{patch}"
 
-        # Write the new version to the environment file
-        with open(os.environ['GITHUB_ENV'], 'a') as env_file:
-            env_file.write(f"TAG={new_version}\n")
-        print(f"TAG={new_version}")
+        # Output the new version
+        print(f"::set-output name=tag::{new_version}")
         EOF
 
     - name: Log in to GitHub Container Registry
@@ -58,9 +56,9 @@ jobs:
 
     - name: Build the Docker image
       run: |
-        docker build . --file Dockerfile --tag ghcr.io/xerovoxx98/filejumpsync:latest --tag ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.TAG }}
+        docker build . --file Dockerfile --tag ghcr.io/xerovoxx98/filejumpsync:latest --tag ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.tag }}
 
     - name: Push the Docker image
       run: |
         docker push ghcr.io/xerovoxx98/filejumpsync:latest
-        docker push ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.TAG }}        
+        docker push ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.tag }}
