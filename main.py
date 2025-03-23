@@ -2,10 +2,10 @@ from watchdog.observers import Observer
 from watchdog.events    import FileSystemEventHandler
 from os                 import getenv
 from os.path            import basename
+from os.path            import exists
 from os                 import makedirs
 from time               import sleep
 from modules            import Logger
-from rich               import print
 from modules            import upload_file_with_progress
 
 LOCAL_PATH =            getenv('FJS_SIMPLE_LOCAL_PATH')
@@ -29,16 +29,18 @@ class EventHandler(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory:
             log.info('Event Triggered by File Creation: ' + str(event.src_path).replace('\\', '/'))
-            content = self.wait_for_file(event.src_path)
-            path = str(event.src_path).removeprefix(LOCAL_PATH)
-            path = path.replace('\\', '/')
-            files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
-            headers = {'Authorization': f'Bearer {API_KEY}'}
-            response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
-            if response.status_code == 201:
-                log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
-            else:
-                log.error('Upload Failed! Error code: ' + str(response.status_code))
+            sleep(15) # Wait 15 seconds, then verify the file still exists. (This stops Temp files from being uploaded)
+            if exists(str(event.src_path).replace('\\', '/')):
+                content = self.wait_for_file(event.src_path)
+                path = str(event.src_path).removeprefix(LOCAL_PATH)
+                path = path.replace('\\', '/')
+                files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
+                headers = {'Authorization': f'Bearer {API_KEY}'}
+                response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
+                if response.status_code == 201:
+                    log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
+                else:
+                    log.error('Upload Failed! Error code: ' + str(response.status_code))
 
 def main():
     makedirs(LOCAL_PATH, exist_ok=True)
