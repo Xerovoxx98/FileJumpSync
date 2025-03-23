@@ -15,6 +15,38 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+
+    - name: Install dependencies
+      run: pip install PyGithub
+
+    - name: Auto-increment version
+      id: version
+      run: |
+        python <<EOF
+        from github import Github
+        import os
+
+        # Authenticate with the GitHub API
+        g = Github(os.getenv("GITHUB_TOKEN"))
+        repo = g.get_repo("${{ github.repository }}")
+
+        # Get the latest tag
+        tags = repo.get_tags()
+        latest_tag = tags[0].name if tags.totalCount > 0 else "v0.0.0"
+
+        # Increment the version
+        major, minor, patch = map(int, latest_tag.lstrip("v").split("."))
+        patch += 1
+        new_version = f"v{major}.{minor}.{patch}"
+
+        # Output the new version
+        print(f"::set-output name=tag::{new_version}")
+        EOF
+
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v2
       with:
@@ -23,7 +55,10 @@ jobs:
         registry: ghcr.io
 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/xerovoxx98/filejumpsync:latest
+      run: |
+        docker build . --file Dockerfile --tag ghcr.io/xerovoxx98/filejumpsync:latest --tag ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.tag }}
 
     - name: Push the Docker image
-      run: docker push ghcr.io/xerovoxx98/filejumpsync:latest
+      run: |
+        docker push ghcr.io/xerovoxx98/filejumpsync:latest
+        docker push ghcr.io/xerovoxx98/filejumpsync:${{ steps.version.outputs.tag }}
