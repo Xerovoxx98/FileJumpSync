@@ -1,22 +1,29 @@
-name: Docker Image CI
+name: Build FileJumpSync Image and Publish to ghcr.io
+
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions: write-all # Explicitly grant write permissions to the GITHUB_TOKEN
+
     steps:
     - uses: actions/checkout@v4
+
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v2
       with:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         registry: ghcr.io
+
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag ghcr.io/xerovoxx98/filejumpsync:latest
+
     - name: Push the Docker image
       run: docker push ghcr.io/xerovoxx98/filejumpsync:latest
