@@ -4,7 +4,6 @@ from os                 import getenv
 from os.path            import basename
 from os                 import makedirs
 from time               import sleep
-import niquests         as nq
 from modules            import Logger
 from rich               import print
 from modules            import upload_file_with_progress
