@@ -1,4 +1,6 @@
 watchdog
 python-dotenv
 rich
-niquests
+tqdm
+requests
+requests_toolbelt
