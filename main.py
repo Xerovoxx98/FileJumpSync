@@ -7,6 +7,7 @@ from os                 import makedirs
 from time               import sleep
 from modules            import Logger
 from modules            import upload_file_with_progress
+from threading          import Thread
 
 LOCAL_PATH =            getenv('FJS_SIMPLE_LOCAL_PATH')
 REMOTE_PATH =           getenv('FJS_SIMPLE_REMOTE_PATH')
@@ -26,37 +27,35 @@ class EventHandler(FileSystemEventHandler):
                 sleep(2.5)
                 continue
 
+    def upload_file(self, file_path):
+        """Handle the file upload in a separate thread"""
+        log.info('Starting upload for: ' + file_path)
+        content = self.wait_for_file(file_path)
+        path = str(file_path).removeprefix(LOCAL_PATH)
+        path = path.replace('\\', '/')
+        files = {'file': (basename(file_path), content), 'relativePath': (None, REMOTE_PATH + "/" + path)}
+        headers = {'Authorization': f'Bearer {API_KEY}'}
+        response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
+        if response.status_code == 201:
+            log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
+        else:
+            log.error('Upload Failed! Error code: ' + str(response.status_code))
+
     def on_created(self, event):
         if not event.is_directory:
-            log.info('Event Triggered by File Creation: ' + str(event.src_path).replace('\\', '/'))
-            content = self.wait_for_file(event.src_path)
-            path = str(event.src_path).removeprefix(LOCAL_PATH)
-            path = path.replace('\\', '/')
-            files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
-            headers = {'Authorization': f'Bearer {API_KEY}'}
-            response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
-            if response.status_code == 201:
-                log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
-            else:
-                log.error('Upload Failed! Error code: ' + str(response.status_code))
-        else:
-            log.warning('Temporary file ignored: ' + str(event.src_path).replace('\\', '/'))
+            file_path = str(event.src_path).replace('\\', '/')
+            log.info('Event Triggered by File Creation: ' + file_path)
+            # Start a new thread for the upload
+            upload_thread = Thread(target=self.upload_file, args=(file_path,))
+            upload_thread.start()
 
     def on_modified(self, event):
         if not event.is_directory:
-            log.info('Event Triggered by File Creation: ' + str(event.src_path).replace('\\', '/'))
-            content = self.wait_for_file(event.src_path)
-            path = str(event.src_path).removeprefix(LOCAL_PATH)
-            path = path.replace('\\', '/')
-            files = {'file': (basename(event.src_path), content),'relativePath': (None, REMOTE_PATH + "/" + path)}
-            headers = {'Authorization': f'Bearer {API_KEY}'}
-            response = upload_file_with_progress(url=API_BASE + "/api/v1/uploads", headers=headers, files=files)
-            if response.status_code == 201:
-                log.info('File Uploaded: ' + REMOTE_PATH + "/" + path)
-            else:
-                log.error('Upload Failed! Error code: ' + str(response.status_code))
-        else:
-            log.warning('Temporary file ignored: ' + str(event.src_path).replace('\\', '/'))
+            file_path = str(event.src_path).replace('\\', '/')
+            log.info('Event Triggered by File Modification: ' + file_path)
+            # Start a new thread for the upload
+            upload_thread = Thread(target=self.upload_file, args=(file_path,))
+            upload_thread.start()
 
 def main():
     makedirs(LOCAL_PATH, exist_ok=True)
