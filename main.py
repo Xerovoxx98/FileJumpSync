@@ -14,6 +14,7 @@ REMOTE_PATH =           getenv('FJS_SIMPLE_REMOTE_PATH')
 API_KEY =               getenv('FJS_SIMPLE_API_KEY')
 API_BASE =              "https://app.filejump.com"
 
+print('Test')
 log = Logger('debug')
 
 class EventHandler(FileSystemEventHandler):
