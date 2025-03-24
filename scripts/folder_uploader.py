@@ -27,7 +27,7 @@ def upload_file(file_path, file_name, remote_path, api_key):
                 timeout=600  # Timeout set to 10 minutes
             )
 
-            if response.status_code == 200:
+            if response.status_code == 201:
                 print(f'Uploaded: {file_name}')
             else:
                 print(f'Failed to upload {file_name}. Status Code: {response.status_code}')
