@@ -9,6 +9,7 @@ import sys
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
+    print(progress)
     print(dumps({"progress": round(progress, 2), "message": f"Processed {current}/{total} files"}))
     sys.stdout.flush()
 
