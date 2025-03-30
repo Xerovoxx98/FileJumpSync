@@ -10,29 +10,33 @@ from tqdm import tqdm
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
-    print(progress / 10)
-    progress = progress / 10
+    print(progress / 100)
+    progress = progress / 100
     print(dumps({"progress": round(progress, 2), "message": f"Processed {current}/{total} files"}))
     sys.stdout.flush()
 
 def upload_file(file_path, file_name, remote_path, api_key):
     try:
+        print(f'[blue]Starting to upload {file_name}[/blue]')
         file_size = os.path.getsize(file_path)  # Get file size for progress tracking
         
         with open(file_path, 'rb') as f:
-            # Wrap the file with tqdm to track progress
-            progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name)
+            progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name, leave=True, dynamic_ncols=True)
+
+            last_bytes_read = 0  # Track the last read byte count
             
             def callback(monitor):
-                progress.update(monitor.bytes_read - progress.n)  # Update progress bar
-            
-            # Create MultipartEncoder
+                nonlocal last_bytes_read
+                new_bytes = monitor.bytes_read - last_bytes_read
+                if new_bytes > 0:
+                    progress.update(new_bytes)
+                    last_bytes_read = monitor.bytes_read
+
             encoder = MultipartEncoder(fields={
                 'file': (file_name, f, 'application/octet-stream'),
                 'relativePath': (None, remote_path + file_name)
             })
 
-            # Wrap encoder with MultipartEncoderMonitor to track progress
             monitor = MultipartEncoderMonitor(encoder, callback)
 
             headers = {
@@ -40,7 +44,6 @@ def upload_file(file_path, file_name, remote_path, api_key):
                 'Content-Type': monitor.content_type
             }
 
-            # Perform the POST request
             response = requests.post(
                 'https://app.filejump.com/api/v1/uploads',
                 headers=headers,
@@ -48,13 +51,14 @@ def upload_file(file_path, file_name, remote_path, api_key):
                 timeout=600
             )
 
-            progress.close()  # Close progress bar
+            progress.n = file_size  # Ensure progress reaches 100%
+            progress.close()  # Properly close progress bar
 
             if response.status_code == 201:
-                print(f'Uploaded: {file_name}')
+                print(f'[green]Uploaded: {file_name}[/green]')
                 return True
             else:
-                print(f'Failed to upload {file_name}. Status Code: {response.status_code}')
+                print(f'[red]Failed to upload {file_name}. Status Code: {response.status_code}[/red]')
                 return False
     except Exception as e:
         print(f'Error uploading {file_name}: {str(e)}')
