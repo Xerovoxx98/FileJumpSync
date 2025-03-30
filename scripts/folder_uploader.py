@@ -1,11 +1,12 @@
 #!/usr/bin/env -S python3 -u
-from requests_toolbelt      import MultipartEncoder
+from requests_toolbelt      import MultipartEncoder, MultipartEncoderMonitor
 import requests
 import argparse
 import os
 from rich import print
 from json import dumps
 import sys
+import tqdm
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
@@ -16,31 +17,45 @@ def report_progress(current, total):
 
 def upload_file(file_path, file_name, remote_path, api_key):
     try:
+        file_size = os.path.getsize(file_path)  # Get file size for progress tracking
+        
         with open(file_path, 'rb') as f:
-            # Create a MultipartEncoder to stream the file
+            # Wrap the file with tqdm to track progress
+            progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name)
+            
+            def callback(monitor):
+                progress.update(monitor.bytes_read - progress.n)  # Update progress bar
+            
+            # Create MultipartEncoder
             encoder = MultipartEncoder(fields={
                 'file': (file_name, f, 'application/octet-stream'),
                 'relativePath': (None, remote_path + file_name)
             })
 
+            # Wrap encoder with MultipartEncoderMonitor to track progress
+            monitor = MultipartEncoderMonitor(encoder, callback)
+
             headers = {
                 'Authorization': f'Bearer {api_key}',
-                'Content-Type': encoder.content_type  # Set the content type to multipart
+                'Content-Type': monitor.content_type
             }
 
-            # Perform the POST request with the encoder, which streams the file
+            # Perform the POST request
             response = requests.post(
                 'https://app.filejump.com/api/v1/uploads',
                 headers=headers,
-                data=encoder,
+                data=monitor,
                 timeout=600
             )
 
+            progress.close()  # Close progress bar
+
             if response.status_code == 201:
                 print(f'Uploaded: {file_name}')
+                return True
             else:
                 print(f'Failed to upload {file_name}. Status Code: {response.status_code}')
-            return True
+                return False
     except Exception as e:
         print(f'Error uploading {file_name}: {str(e)}')
         return False
