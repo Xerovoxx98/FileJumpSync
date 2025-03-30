@@ -7,6 +7,7 @@ from rich import print
 from json import dumps
 import sys
 from tqdm import tqdm
+import time
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
@@ -21,7 +22,9 @@ def upload_file(file_path, file_name, remote_path, api_key):
         file_size = os.path.getsize(file_path)  # Get file size for progress tracking
         
         with open(file_path, 'rb') as f:
-            progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name, leave=True, dynamic_ncols=True)
+            # Add mininterval to control update frequency (in seconds)
+            progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name, 
+                            leave=True, dynamic_ncols=True, mininterval=1)
 
             last_bytes_read = 0  # Track the last read byte count
             
