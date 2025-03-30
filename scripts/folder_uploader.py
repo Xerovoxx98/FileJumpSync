@@ -6,7 +6,7 @@ import os
 from rich import print
 from json import dumps
 import sys
-import tqdm
+from tqdm import tqdm
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
