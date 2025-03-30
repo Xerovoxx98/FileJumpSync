@@ -3,7 +3,14 @@ from requests_toolbelt      import MultipartEncoder
 import requests
 import argparse
 import os
+from rich import print
+from json import dumps
+import sys
 
+def report_progress(current, total):
+    progress = (current / total) * 100 if total > 0 else 100
+    print(dumps({"progress": round(progress, 2), "message": f"Processed {current}/{total} files"}))
+    sys.stdout.flush()
 
 def upload_file(file_path, file_name, remote_path, api_key):
     try:
@@ -24,24 +31,34 @@ def upload_file(file_path, file_name, remote_path, api_key):
                 'https://app.filejump.com/api/v1/uploads',
                 headers=headers,
                 data=encoder,
-                timeout=600  # Timeout set to 10 minutes
+                timeout=600
             )
 
             if response.status_code == 201:
                 print(f'Uploaded: {file_name}')
             else:
                 print(f'Failed to upload {file_name}. Status Code: {response.status_code}')
+            return True
     except Exception as e:
         print(f'Error uploading {file_name}: {str(e)}')
+        return False
+
 
 def main(local_path, remote_path, api_key):
     print('Script Starting.')
 
-    # Loop through files in the specified backup directory
-    for file in os.listdir(local_path):
+    files = os.listdir(local_path)
+    total_files = len(files)
+
+    if total_files == 0:
+        report_progress(100, 100)  # No files to process, complete instantly
+        print('No files found. Exiting.')
+        return
+
+    for idx, file in enumerate(files, start=1):
         file_path = os.path.join(local_path, file)
-        print(f'Uploading: {file_path}')
         upload_file(file_path, file, remote_path, api_key)
+        report_progress(idx, total_files)
 
     print('Script Finished.')
 
