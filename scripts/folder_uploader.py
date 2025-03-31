@@ -1,13 +1,13 @@
 #!/usr/bin/env -S python3 -u
-from requests_toolbelt      import MultipartEncoder, MultipartEncoderMonitor
+from   requests_toolbelt      import MultipartEncoder
+from   requests_toolbelt      import MultipartEncoderMonitor
+from   rich                   import print
+from   json                   import dumps
+from   tqdm                   import tqdm
 import requests
 import argparse
 import os
-from rich import print
-from json import dumps
 import sys
-from tqdm import tqdm
-import time
 
 def report_progress(current, total):
     progress = (current / total) * 100 if total > 0 else 100
@@ -19,14 +19,13 @@ def report_progress(current, total):
 def upload_file(file_path, file_name, remote_path, api_key):
     try:
         print(f'[blue]Starting to upload {file_name}[/blue]')
-        file_size = os.path.getsize(file_path)  # Get file size for progress tracking
+        file_size = os.path.getsize(file_path)
         
         with open(file_path, 'rb') as f:
-            # Add mininterval to control update frequency (in seconds)
             progress = tqdm(total=file_size, unit='B', unit_scale=True, desc=file_name, 
                             leave=True, dynamic_ncols=True, mininterval=1)
 
-            last_bytes_read = 0  # Track the last read byte count
+            last_bytes_read = 0 
             
             def callback(monitor):
                 nonlocal last_bytes_read
@@ -54,8 +53,8 @@ def upload_file(file_path, file_name, remote_path, api_key):
                 timeout=600
             )
 
-            progress.n = file_size  # Ensure progress reaches 100%
-            progress.close()  # Properly close progress bar
+            progress.n = file_size
+            progress.close()
 
             if response.status_code == 201:
                 print(f'[green]Uploaded: {file_name}[/green]')
@@ -75,13 +74,15 @@ def main(local_path, remote_path, api_key):
     total_files = len(files)
 
     if total_files == 0:
-        report_progress(100, 100)  # No files to process, complete instantly
+        report_progress(100, 100)
         print('No files found. Exiting.')
         return
 
     for idx, file in enumerate(files, start=1):
         file_path = os.path.join(local_path, file)
-        upload_file(file_path, file, remote_path, api_key)
+        uploaded = False
+        while not uploaded:
+            uploaded = upload_file(file_path, file, remote_path, api_key)
         report_progress(idx, total_files)
 
     print('Script Finished.')
