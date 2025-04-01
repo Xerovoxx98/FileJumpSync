@@ -31,7 +31,7 @@ from rich                   import print
 from os                     import _exit
 
 if __name__ == "__main__":
-    log = Logger('debug')
+    log = Logger('error')
 
 IGNORE_PREFIXES         = ['.~lock']
 LOCAL_PATH              = getenv('FJS_SIMPLE_LOCAL_PATH')
@@ -43,6 +43,7 @@ MAX_UPLOAD_THREADS      = 8
 REMOTE_BASE             = basename(REMOTE_PATH)
 FILE_ENTRIES_URL        = '/api/v1/drive/file-entries'
 MAX_ENTRIES_PER_PAGE    = 50
+USE_PROGRESS_BAR        = True
 
 class ApiHandler:
     def __init__(self, base_url: str, remote_path: str, api_key: str):
@@ -142,7 +143,8 @@ class ApiHandler:
             remote_path = REMOTE_PATH + str(local_path).removeprefix(TEMP_FOLDER)
             remote_path = remote_path.replace("\\", "/")
             encoder = MultipartEncoder(fields={'file': (file_name, f,'application/octet-stream'),'relativePath': (None, remote_path)})
-            monitor = MultipartEncoderMonitor(encoder, callback)
+            if USE_PROGRESS_BAR:
+                monitor = MultipartEncoderMonitor(encoder, callback)
             headers = {'Authorization': f'Bearer {API_KEY}', 'Content-Type': monitor.content_type, 'Connection': 'keep-alive'}
             response = post(self.base_url + "/api/v1/uploads", headers=headers, data=monitor, timeout=600, stream=True)
             progress.n = file_size
@@ -227,7 +229,11 @@ class EncryptionHandler:
         makedirs(output_file.replace(basename(output_file), ''), exist_ok=True)
         file_size = path.getsize(input_file)
         description = "Encrypting: " + basename(input_file)
-        with open(input_file, 'rb') as fin, open(output_file, 'wb') as fout, tqdm(total=file_size, unit='B', unit_scale=True, desc=description, colour='blue') as pbar:
+        if USE_PROGRESS_BAR:
+            disable = True
+        else:
+            disable = False
+        with open(input_file, 'rb') as fin, open(output_file, 'wb') as fout, tqdm(total=file_size, unit='B', unit_scale=True, desc=description, colour='blue', disable=disable, leave=False) as pbar:
             while True:
                 chunk = fin.read(chunk_size)
                 if not chunk:
@@ -378,7 +384,7 @@ def main() -> None:
         if file_record is None:
             log.error('FAILED TO GET FILE RECORD FOR: ' + value['info']['name'])
         else:
-            log.info('File Record retrieved for: ' + value['info']['name'])
+            log.debug('File Record retrieved for: ' + value['info']['name'])
             file_record.remote_exist = True
             db_handler.session.commit()
 
