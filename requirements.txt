@@ -4,3 +4,4 @@ rich
 tqdm
 requests
 requests_toolbelt
+cryptography
