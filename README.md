@@ -1,3 +1,10 @@
+# INFO
+There is a PR currently pending for adding support for FileJump to RClone made by: [@masrlinu](https://github.com/masrlinu)
+PR: https://github.com/rclone/rclone/pull/8693
+
+I do not currently have time to continue building this, if you are looking for an option for syncing to files to FileJump, I would recommend waiting for this.
+
+
 # FileJumpSync
 A folder Sync client for FileJump https://filejump.com/ to run in a Docker container.
 
